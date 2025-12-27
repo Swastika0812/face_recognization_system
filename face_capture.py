@@ -1,47 +1,58 @@
 import cv2
 import os
+import time
 
-# 1: Path to cascade
-cascade_path = "models/haarcascade_frontalface_default.xml"
-face_classifier = cv2.CascadeClassifier(cascade_path)
+CASCADE_PATH = "models/haarcascade_frontalface_default.xml"
+DATASET_PATH = "dataset"
 
-def face_extractor(img):
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)          # convert to gray
-    faces = face_classifier.detectMultiScale(gray, 1.3, 5) # detect
-    if len(faces) == 0:
-        return None
-    # take last detected face (or first) and crop
-    x, y, w, h = faces[0]
-    return gray[y:y+h, x:x+w]   # return grayscale crop
+face_cascade = cv2.CascadeClassifier(CASCADE_PATH)
 
-# --------- Main ----------
-if __name__ == "__main__":
-    if not os.path.exists("dataset"):
-        os.makedirs("dataset")
+if not os.path.exists(DATASET_PATH):
+    os.makedirs(DATASET_PATH)
 
-    cam = cv2.VideoCapture(0)                 # open webcam (0)
-    user_id = input("Enter numeric user ID: ")   # e.g. 1
-    user_name = input("Enter user name (optional): ")
+cam = cv2.VideoCapture(0)
+if not cam.isOpened():
+    raise IOError("Cannot open webcam")
 
-    count = 0
-    while True:
-        ret, frame = cam.read()
-        if not ret:
-            print("Failed to capture image from camera")
-            break
+user_id = 1   # change manually for new person
+count = 0
+last_capture_time = 0
 
-        face = face_extractor(frame)
-        if face is not None:
+print("Camera started — 1 image per second")
+print("Move your face slowly (left, right, up, down)")
+print("Press Q / ESC to stop early")
+
+while True:
+    ret, frame = cam.read()
+    if not ret:
+        break
+
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    faces = face_cascade.detectMultiScale(gray, 1.3, 5)
+
+    current_time = time.time()
+
+    for (x, y, w, h) in faces:
+        if current_time - last_capture_time >= 1:  # 1 second gap
             count += 1
+            last_capture_time = current_time
+
+            face = gray[y:y+h, x:x+w]
             face = cv2.resize(face, (200, 200))
-            file_path = f"dataset/user.{user_id}.{count}.jpg"
-            cv2.imwrite(file_path, face)
-            cv2.putText(face, str(count), (5, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255), 2)
-            cv2.imshow("Face Capture", face)
+            cv2.imwrite(f"dataset/user.{user_id}.{count}.jpg", face)
 
-        if cv2.waitKey(1) == 13 or count >= 50:  # Enter key or 50 images
-            break
+            print(f"Saved image {count}")
 
-    cam.release()
-    cv2.destroyAllWindows()
-    print("Collected", count, "images for user", user_id)
+        cv2.rectangle(frame, (x, y), (x+w, y+h), (0,255,0), 2)
+        cv2.putText(frame, f"Images: {count}/50", (x, y-10),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0,255,0), 2)
+
+    cv2.imshow("Face Capture", frame)
+
+    key = cv2.waitKey(1) & 0xFF
+    if key == ord('q') or key == 27 or count >= 50:
+        break
+
+cam.release()
+cv2.destroyAllWindows()
+print(f"Collected {count} images")
