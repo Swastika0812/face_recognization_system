@@ -141,7 +141,7 @@ print(f"Collected {count} images")
 
 - Dataset generation without manual effort
 
-![Auto Face Capturing](assets\face_capturing.png)
+![Auto Face Capturing](assets/face_capturing.png)
 
 ### 2️⃣ Model Training
 
@@ -337,7 +337,7 @@ print("Camera stopped")
 
 - Smooth real-time performance
 
-![Live Output: Face-recognise](assets\Output.png)
+![Live Output: Face-recognise](assets/Output.png)
 
 
 
